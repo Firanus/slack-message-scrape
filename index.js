@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const axios = require("axios");
+const { findChannelWithName } = require("./utils");
 
 const authToken = process.env.SLACK_OAUTH_TOKEN;
 if (!authToken) {
@@ -9,31 +10,8 @@ if (!authToken) {
 
 axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
 
-const slackListConversationsEndpoint =
-  "https://slack.com/api/conversations.list";
-
 const slackConversationHistoryEndpoint =
   "https://slack.com/api/conversations.history";
-
-const findChannelWithName = async (name) => {
-  const result = await axios.get(slackListConversationsEndpoint);
-  let { channels, response_metadata } = result.data;
-
-  let desiredChannel = channels.find((channel) => channel.name.includes(name));
-
-  while (!desiredChannel && response_metadata.next_cursor) {
-    let nextResult = await axios.get(
-      `${slackListConversationsEndpoint}?cursor=${response_metadata.next_cursor}`
-    );
-
-    channels = nextResult.data.channels;
-    response_metadata = nextResult.data.response_metadata;
-
-    desiredChannel = channels.find((channel) => channel.name.includes(name));
-  }
-
-  return desiredChannel;
-};
 
 (async () => {
   const learnerblyChannel = await findChannelWithName("learning-together");
@@ -41,5 +19,33 @@ const findChannelWithName = async (name) => {
   const result = await axios.get(
     `${slackConversationHistoryEndpoint}?channel=${learnerblyChannel.id}`
   );
-  console.log(JSON.stringify(result.data, null, 2));
+  const processedResult = processLearnerblyResult(result);
+  // console.log(processedResult);
 })();
+
+const learnerblyBotId = "B022NBT3LR0";
+
+const processLearnerblyResult = (result) => {
+  const { data } = result;
+  console.log(data);
+  const { messages } = data;
+
+  const learnerblyInformation = messages
+    .filter((message) => message.bot_id === learnerblyBotId)
+    .map((message) => {
+      const firstBlock = message.blocks[0];
+      const text = firstBlock.text.text;
+
+      const prefix = "New learning request! ";
+      const seperator = " has just requested ";
+
+      const firstLine = text.split("\n")[0];
+      const [nameSection, titleSection] = firstLine.split(seperator);
+      const name = nameSection.slice(prefix.length);
+      const title = titleSection.slice(1, titleSection.length - 2);
+
+      return { name, title };
+    });
+
+  return learnerblyInformation;
+};
