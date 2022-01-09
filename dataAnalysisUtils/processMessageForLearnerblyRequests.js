@@ -21,8 +21,12 @@ const processMessageForLearnerblyRequest = (message) => {
 
   const firstLine = text.split("\n")[0];
   const [nameSection, titleSection] = firstLine.split(seperator);
-  const name = nameSection.slice(prefix.length);
-  const title = titleSection.slice(1, titleSection.length - 2);
+  const name = nameSection.slice(prefix.length).trim().replace(/\s\s+/g, " ");
+  const title = titleSection
+    .slice(1, titleSection.length - 2)
+    .replace("&amp;", "&")
+    .trim()
+    .replace(/\s\s+/g, " ");
 
   return { id, name, title, timestamp };
 };
