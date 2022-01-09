@@ -23,6 +23,4 @@ const findChannelWithName = async (name) => {
   return desiredChannel;
 };
 
-module.exports = {
-  findChannelWithName,
-};
+module.exports = findChannelWithName;
